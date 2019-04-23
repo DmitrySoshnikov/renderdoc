@@ -83,7 +83,7 @@ std::vector<ABI> GetSupportedABIs(const std::string &deviceID)
   // typically 32-bit.
   switch(GetABI(adbAbi))
   {
-    case ABI::arm64_v8a: return {ABI::armeabi_v7a, ABI::arm64_v8a};
+    case ABI::arm64_v8a: return {ABI::armeabi_v7a};//, * DS hack: 32-bit only * ABI::arm64_v8a
     case ABI::armeabi_v7a: return {ABI::armeabi_v7a};
     case ABI::x86_64: return {ABI::x86, ABI::x86_64};
     case ABI::x86: return {ABI::x86};
