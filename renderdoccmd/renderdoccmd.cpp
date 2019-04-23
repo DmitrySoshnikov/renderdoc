@@ -1292,6 +1292,8 @@ int renderdoccmd(const GlobalEnvironment &env, std::vector<std::string> &argv)
     {
       if(cmd.exist("opt-disallow-vsync"))
         opts.allowVSync = false;
+      if(cmd.exist("opt-low-memory-mode"))
+        opts.lowMemoryMode = true;
       if(cmd.exist("opt-disallow-fullscreen"))
         opts.allowFullscreen = false;
       if(cmd.exist("opt-api-validation"))

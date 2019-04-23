@@ -50,6 +50,7 @@ int RENDERDOC_CC SetCaptureOptionU32(RENDERDOC_CaptureOption opt, uint32_t val)
       break;
     case eRENDERDOC_Option_CaptureAllCmdLists: opts.captureAllCmdLists = (val != 0); break;
     case eRENDERDOC_Option_DebugOutputMute: opts.debugOutputMute = (val != 0); break;
+    case eRENDERDOC_Option_LowMemoryMode: opts.lowMemoryMode = (val != 0); break;
     case eRENDERDOC_Option_AllowUnsupportedVendorExtensions:
       if(val == 0x10DE)
         RenderDoc::Inst().EnableVendorExtensions(VendorExtensions::NvAPI);
@@ -85,6 +86,7 @@ int RENDERDOC_CC SetCaptureOptionF32(RENDERDOC_CaptureOption opt, float val)
       break;
     case eRENDERDOC_Option_CaptureAllCmdLists: opts.captureAllCmdLists = (val != 0.0f); break;
     case eRENDERDOC_Option_DebugOutputMute: opts.debugOutputMute = (val != 0.0f); break;
+    case eRENDERDOC_Option_LowMemoryMode: opts.lowMemoryMode = (val != 0.0f); break;
     case eRENDERDOC_Option_AllowUnsupportedVendorExtensions:
       RDCWARN("AllowUnsupportedVendorExtensions unexpected parameter %f", val);
       break;
@@ -125,6 +127,8 @@ uint32_t RENDERDOC_CC GetCaptureOptionU32(RENDERDOC_CaptureOption opt)
     case eRENDERDOC_Option_DebugOutputMute:
       return (RenderDoc::Inst().GetCaptureOptions().debugOutputMute ? 1 : 0);
     case eRENDERDOC_Option_AllowUnsupportedVendorExtensions: return 0;
+    case eRENDERDOC_Option_LowMemoryMode:
+      return (RenderDoc::Inst().GetCaptureOptions().lowMemoryMode ? 1 : 0);
     default: break;
   }
 
@@ -162,6 +166,8 @@ float RENDERDOC_CC GetCaptureOptionF32(RENDERDOC_CaptureOption opt)
     case eRENDERDOC_Option_DebugOutputMute:
       return (RenderDoc::Inst().GetCaptureOptions().debugOutputMute ? 1.0f : 0.0f);
     case eRENDERDOC_Option_AllowUnsupportedVendorExtensions: return 0.0f;
+    case eRENDERDOC_Option_LowMemoryMode:
+      return (RenderDoc::Inst().GetCaptureOptions().lowMemoryMode ? 1.0f : 0.0f);
     default: break;
   }
 
@@ -182,4 +188,5 @@ CaptureOptions::CaptureOptions()
   refAllResources = false;
   captureAllCmdLists = false;
   debugOutputMute = true;
+  lowMemoryMode = false;
 }

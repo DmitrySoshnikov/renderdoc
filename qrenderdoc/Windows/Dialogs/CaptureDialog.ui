@@ -380,6 +380,16 @@
        </widget>
       </item>
       <item>
+        <widget class="QCheckBox" name="LowMemoryMode">
+          <property name="toolTip">
+            <string>Enables Low Memory mode for capture</string>
+          </property>
+          <property name="text">
+            <string>Low Memory mode</string>
+          </property>
+        </widget>
+      </item>
+      <item>
        <widget class="QFrame" name="DebuggerDelayFrame">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
