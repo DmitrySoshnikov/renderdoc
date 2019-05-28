@@ -97,6 +97,10 @@ enum FrameRefType
 const FrameRefType eFrameRef_Minimum = eFrameRef_None;
 const FrameRefType eFrameRef_Maximum = eFrameRef_ReadBeforeWrite;
 
+// Threshold value when a resource is considered "persistent" within
+// this number of frames.
+const uint32_t PERSISTENT_RESOURCE_FRAMES_COUNT = 100;
+
 DECLARE_REFLECTION_ENUM(FrameRefType);
 
 // Compose frame refs that occur in a known order.
@@ -549,6 +553,11 @@ public:
   WrappedResourceType GetWrapper(RealResourceType real);
   void RemoveWrapper(RealResourceType real);
 
+  void ResetPersistencyCounter(const ResourceId &id);
+  void IncrementPersistencyCounters();
+  bool IsResourcePersistent(const ResourceId &id);
+  virtual bool IsResourceTrackedForPersistency(const WrappedResourceType &res) { return false; }
+
 protected:
   friend InitialContentData;
   // 'interface' to implement by derived classes
@@ -626,6 +635,17 @@ protected:
 
   // used during replay - holds current resource replacements
   std::map<ResourceId, ResourceId> m_Replacements;
+
+  // LRU resources: tracks the recources recently used by
+  // specific functions (e.g. binding frame buffer in GK/Vulkan calls).
+  //
+  // If a resource is not used by those functions within last
+  // `PERSISTENT_RESOURCE_FRAMES_COUNT`, it's considered "persistent"
+  // within the frames.
+  //
+  // The persistency counter is updated on the "frame end" event, and
+  // is reset to 0 when resource is used from the functions of interest.
+  std::map<ResourceId, uint32_t> m_ResourcePersistencyCounters;
 };
 
 template <typename Configuration>
@@ -1206,6 +1226,37 @@ template <typename Configuration>
 void ResourceManager<Configuration>::DestroyResourceRecord(ResourceRecord *record)
 {
   delete(RecordType *)record;
+}
+
+template <typename Configuration>
+inline void ResourceManager<Configuration>::ResetPersistencyCounter(const ResourceId &id)
+{
+  m_ResourcePersistencyCounters[id] = 0;
+}
+
+template <typename Configuration>
+inline void ResourceManager<Configuration>::IncrementPersistencyCounters()
+{
+  SCOPED_LOCK(m_Lock);
+  for(auto it = m_ResourcePersistencyCounters.begin(); it != m_ResourcePersistencyCounters.end(); ++it)
+  {
+    it->second++;
+  }
+}
+
+template <typename Configuration>
+inline bool ResourceManager<Configuration>::IsResourcePersistent(const ResourceId &id)
+{
+  SCOPED_LOCK(m_Lock);
+
+  WrappedResourceType res = GetCurrentResource(id);
+
+  if(!IsResourceTrackedForPersistency(res))
+    return false;
+
+  auto it = m_ResourcePersistencyCounters.find(id);
+  return it == m_ResourcePersistencyCounters.end() ||
+    it->second >= PERSISTENT_RESOURCE_FRAMES_COUNT;
 }
 
 template <typename Configuration>

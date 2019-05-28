@@ -58,6 +58,81 @@ void GLResourceManager::MarkVAOReferenced(GLResource res, FrameRefType ref, bool
   }
 }
 
+std::vector<GLResource> GLResourceManager::GetFBOAttachmentsByType(GLResource res,
+                                                                   RDCGLenum attachmentType)
+{
+  RDCASSERT("GLResourceManager::GetFBOAttachmentsByType: expected eResFramebuffer resource",
+            res.Namespace == eResFramebuffer);
+
+  std::vector<GLResource> attachments;
+  ContextPair &ctx = m_Driver->GetCtx();
+
+  GLint numCols = 0;
+  GL.glGetIntegerv(eGL_MAX_COLOR_ATTACHMENTS, &numCols);
+
+  GLenum type = eGL_TEXTURE;
+  GLuint name = 0;
+
+  for(int c = 0; c < numCols; c++)
+  {
+    GL.glGetNamedFramebufferAttachmentParameterivEXT(res.name, GLenum(eGL_COLOR_ATTACHMENT0 + c),
+                                                     eGL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME,
+                                                     (GLint *)&name);
+    GL.glGetNamedFramebufferAttachmentParameterivEXT(res.name, GLenum(eGL_COLOR_ATTACHMENT0 + c),
+                                                     eGL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE,
+                                                     (GLint *)&type);
+    if(name && type == attachmentType)
+    {
+      attachments.push_back(type == eGL_RENDERBUFFER ? RenderbufferRes(ctx, name)
+                                                     : TextureRes(ctx, name));
+    }
+  }
+
+  GL.glGetNamedFramebufferAttachmentParameterivEXT(
+      res.name, eGL_DEPTH_ATTACHMENT, eGL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, (GLint *)&name);
+  GL.glGetNamedFramebufferAttachmentParameterivEXT(
+      res.name, eGL_DEPTH_ATTACHMENT, eGL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, (GLint *)&type);
+
+  if(name && type == attachmentType)
+  {
+    attachments.push_back(type == eGL_RENDERBUFFER ? RenderbufferRes(ctx, name)
+                                                   : TextureRes(ctx, name));
+  }
+
+  GL.glGetNamedFramebufferAttachmentParameterivEXT(
+      res.name, eGL_STENCIL_ATTACHMENT, eGL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, (GLint *)&name);
+  GL.glGetNamedFramebufferAttachmentParameterivEXT(
+      res.name, eGL_STENCIL_ATTACHMENT, eGL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, (GLint *)&type);
+
+  if(name && type == attachmentType)
+  {
+    attachments.push_back(type == eGL_RENDERBUFFER ? RenderbufferRes(ctx, name)
+                                                   : TextureRes(ctx, name));
+  }
+
+  GL.glGetNamedFramebufferAttachmentParameterivEXT(
+      res.name, eGL_DEPTH_STENCIL_ATTACHMENT, eGL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, (GLint *)&name);
+  GL.glGetNamedFramebufferAttachmentParameterivEXT(
+      res.name, eGL_DEPTH_STENCIL_ATTACHMENT, eGL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, (GLint *)&type);
+
+  if(name && type == attachmentType)
+  {
+    attachments.push_back(type == eGL_RENDERBUFFER ? RenderbufferRes(ctx, name)
+                                                   : TextureRes(ctx, name));
+  }
+
+  return attachments;
+}
+
+std::vector<GLResource> GLResourceManager::GetFBOTextures(GLResource res)
+{
+  return GetFBOAttachmentsByType(res, eGL_TEXTURE);
+}
+
+bool GLResourceManager::IsResourceTrackedForPersistency(const GLResource &res) {
+  return res.Namespace == eResTexture;
+}
+
 void GLResourceManager::MarkFBOReferenced(GLResource res, FrameRefType ref)
 {
   if(res.name == 0)

@@ -1658,6 +1658,10 @@ void WrappedOpenGL::SwapBuffers(void *windowHandle)
   if(IsBackgroundCapturing(m_State))
     RenderDoc::Inst().Tick();
 
+  // Update persistency counters of the tracked resources.
+  if(RenderDoc::Inst().GetCaptureOptions().lowMemoryMode)
+    GetResourceManager()->IncrementPersistencyCounters();
+
   // don't do anything if no context is active.
   if(m_ActiveContexts[Threading::GetCurrentID()].ctx == NULL)
   {

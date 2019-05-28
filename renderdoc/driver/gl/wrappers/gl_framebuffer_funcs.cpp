@@ -1471,6 +1471,17 @@ void WrappedOpenGL::glBindFramebuffer(GLenum target, GLuint framebuffer)
 {
   SERIALISE_TIME_CALL(GL.glBindFramebuffer(target, framebuffer));
 
+  if(RenderDoc::Inst().GetCaptureOptions().lowMemoryMode)
+  {
+    std::vector<GLResource> fboTextures =
+        GetResourceManager()->GetFBOTextures(FramebufferRes(GetCtx(), framebuffer));
+
+    for(const GLResource &texture : fboTextures)
+    {
+      GetResourceManager()->ResetPersistencyCounter(GetResourceManager()->GetID(texture));
+    }
+  }
+
   if(IsActiveCapturing(m_State))
   {
     USE_SCRATCH_SERIALISER();

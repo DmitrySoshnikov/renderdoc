@@ -239,6 +239,11 @@ public:
   void MarkVAOReferenced(GLResource res, FrameRefType ref, bool allowFake0 = false);
   void MarkFBOReferenced(GLResource res, FrameRefType ref);
 
+  std::vector<GLResource> GetFBOAttachmentsByType(GLResource res, RDCGLenum attachmentType);
+  std::vector<GLResource> GetFBOTextures(GLResource res);
+
+  bool IsResourceTrackedForPersistency(const GLResource &res);
+
   void Force_ReferenceViews();
 
   template <typename SerialiserType>
