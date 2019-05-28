@@ -96,6 +96,7 @@ CaptureSettings::operator QVariant() const
 
   QVariantMap opts;
   opts[lit("allowVSync")] = options.allowVSync;
+  opts[lit("lowMemoryMode")] = options.lowMemoryMode;
   opts[lit("allowFullscreen")] = options.allowFullscreen;
   opts[lit("apiValidation")] = options.apiValidation;
   opts[lit("captureCallstacks")] = options.captureCallstacks;
@@ -135,6 +136,7 @@ CaptureSettings::CaptureSettings(const QVariant &v)
   QVariantMap opts = data[lit("options")].toMap();
 
   options.allowVSync = opts[lit("allowVSync")].toBool();
+  options.lowMemoryMode = opts[lit("lowMemoryMode")].toBool();
   options.allowFullscreen = opts[lit("allowFullscreen")].toBool();
   options.apiValidation = opts[lit("apiValidation")].toBool();
   options.captureCallstacks = opts[lit("captureCallstacks")].toBool();

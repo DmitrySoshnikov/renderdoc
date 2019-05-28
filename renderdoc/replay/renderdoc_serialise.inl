@@ -101,6 +101,7 @@ template <class SerialiserType>
 void DoSerialise(SerialiserType &ser, CaptureOptions &el)
 {
   SERIALISE_MEMBER(allowVSync);
+  SERIALISE_MEMBER(lowMemoryMode);
   SERIALISE_MEMBER(allowFullscreen);
   SERIALISE_MEMBER(apiValidation);
   SERIALISE_MEMBER(captureCallstacks);

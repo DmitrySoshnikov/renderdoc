@@ -213,6 +213,14 @@ typedef enum RENDERDOC_CaptureOption {
   // necessary as directed by a RenderDoc developer.
   eRENDERDOC_Option_AllowUnsupportedVendorExtensions = 12,
 
+  // Toggles Low Memory mode.
+  //
+  // Default - disabled
+  //
+  // 1 - The capture happens in low memory mode
+  // 0 - The capture happens in full memory mode
+  eRENDERDOC_Option_LowMemoryMode = 13,
+
 } RENDERDOC_CaptureOption;
 
 // Sets an option that controls how RenderDoc behaves on capture.

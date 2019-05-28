@@ -199,6 +199,16 @@ Default - enabled
 ``False`` - API debugging is displayed as normal.
 )");
   bool debugOutputMute;
+
+  DOCUMENT(R"(Allow the application to capture in Low Memory mode.
+
+Default - disabled
+
+``True`` - The capture happens in low memory mode.
+
+``False`` - The capture happens in full memory mode.
+)");
+  bool lowMemoryMode;
 };
 
 DECLARE_REFLECTION_STRUCT(CaptureOptions);
