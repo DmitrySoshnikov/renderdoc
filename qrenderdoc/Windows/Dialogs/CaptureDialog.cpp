@@ -908,6 +908,7 @@ void CaptureDialog::SetSettings(CaptureSettings settings)
   ui->DelayForDebugger->setValue(settings.options.delayForDebugger);
   ui->VerifyBufferAccess->setChecked(settings.options.verifyBufferAccess);
   ui->AutoStart->setChecked(settings.autoStart);
+  ui->LowMemoryMode->setChecked(settings.options.lowMemoryMode);
 
   // force flush this state
   on_CaptureCallstacks_toggled(ui->CaptureCallstacks->isChecked());
@@ -947,6 +948,7 @@ CaptureSettings CaptureDialog::Settings()
 
   ret.options.allowFullscreen = ui->AllowFullscreen->isChecked();
   ret.options.allowVSync = ui->AllowVSync->isChecked();
+  ret.options.lowMemoryMode = ui->LowMemoryMode->isChecked();
   ret.options.hookIntoChildren = ui->HookIntoChildren->isChecked();
   ret.options.captureCallstacks = ui->CaptureCallstacks->isChecked();
   ret.options.captureCallstacksOnlyDraws = ui->CaptureCallstacksOnlyDraws->isChecked();
