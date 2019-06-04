@@ -2068,6 +2068,9 @@ bool WrappedOpenGL::EndFrameCapture(void *dev, void *wnd)
 
     GetResourceManager()->FreeInitialContents();
 
+    GetResourceManager()->ClearPersistencyCounters();
+
+
     for(auto it = m_CoherentMaps.begin(); it != m_CoherentMaps.end(); ++it)
     {
       GLResourceRecord *record = *it;

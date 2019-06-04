@@ -544,6 +544,9 @@ public:
   // Free any initial contents that are prepared (for after capture is complete)
   void FreeInitialContents();
 
+  // Free resource initial contents
+  void FreeResourceInitialContents(const ResourceId &id);
+
   // Apply the initial contents for the resources that need them, used at the start of a frame
   void ApplyInitialContents();
 
@@ -554,8 +557,10 @@ public:
   void RemoveWrapper(RealResourceType real);
 
   void ResetPersistencyCounter(const ResourceId &id);
+  void ClearPersistencyCounters();
   void IncrementPersistencyCounters();
   bool IsResourcePersistent(const ResourceId &id);
+  bool Prepare_ResourceInitialStateIfNeeded(const ResourceId &id);
   virtual bool IsResourceTrackedForPersistency(const WrappedResourceType &res) { return false; }
 
 protected:
@@ -636,7 +641,7 @@ protected:
   // used during replay - holds current resource replacements
   std::map<ResourceId, ResourceId> m_Replacements;
 
-  // LRU resources: tracks the recources recently used by
+  // LRU resources: tracks the resources recently used by
   // specific functions (e.g. binding frame buffer in GK/Vulkan calls).
   //
   // If a resource is not used by those functions within last
@@ -646,6 +651,10 @@ protected:
   // The persistency counter is updated on the "frame end" event, and
   // is reset to 0 when resource is used from the functions of interest.
   std::map<ResourceId, uint32_t> m_ResourcePersistencyCounters;
+
+  // During initial resources preparation, persistent resources are
+  // postponed until serializing to RDC file.
+  std::set<ResourceId> m_PostponedResourceIDs;
 };
 
 template <typename Configuration>
@@ -856,6 +865,23 @@ void ResourceManager<Configuration>::FreeInitialContents()
 }
 
 template <typename Configuration>
+bool ResourceManager<Configuration>::Prepare_ResourceInitialStateIfNeeded(const ResourceId &id)
+{
+  if(!RenderDoc::Inst().GetCaptureOptions().lowMemoryMode)
+    return false;
+
+  auto it = m_PostponedResourceIDs.find(id);
+
+  if(it == m_PostponedResourceIDs.end())
+    return false;
+
+  WrappedResourceType res = GetCurrentResource(id);
+  Prepare_InitialState(res);
+
+  return true;
+}
+
+template <typename Configuration>
 void ResourceManager<Configuration>::CreateInitialContents(ReadSerialiser &ser)
 {
   using namespace ResourceManagerInternal;
@@ -1015,6 +1041,17 @@ void ResourceManager<Configuration>::PrepareInitialContents()
     if(record == NULL || record->InternalResource)
       continue;
 
+    bool postponePrepare =
+      RenderDoc::Inst().GetCaptureOptions().lowMemoryMode && IsResourcePersistent(id);
+
+    if(postponePrepare)
+    {
+      m_PostponedResourceIDs.insert(id);
+      // Set empty contents here, it'll be prepared on serialization.
+      SetInitialContents(id, InitialContentData());
+      continue;
+    }
+
     prepared++;
 
 #if ENABLED(VERBOSE_DIRTY_RESOURCES)
@@ -1051,7 +1088,7 @@ void ResourceManager<Configuration>::InsertInitialContentsChunks(WriteSerialiser
        !RenderDoc::Inst().GetCaptureOptions().refAllResources)
     {
 #if ENABLED(VERBOSE_DIRTY_RESOURCES)
-      RDCDEBUG("Dirty tesource %llu is GPU dirty but not referenced - skipping", id);
+      RDCDEBUG("Dirty resource %llu is GPU dirty but not referenced - skipping", id);
 #endif
       skipped++;
       continue;
@@ -1079,6 +1116,9 @@ void ResourceManager<Configuration>::InsertInitialContentsChunks(WriteSerialiser
     RDCDEBUG("Serialising dirty Resource %llu", id);
 #endif
 
+    // Load postponed resource if needed.
+    bool handleNow = Prepare_ResourceInitialStateIfNeeded(id);
+
     dirty++;
 
     if(!Need_InitialStateChunk(id, it->second.data))
@@ -1099,6 +1139,12 @@ void ResourceManager<Configuration>::InsertInitialContentsChunks(WriteSerialiser
       SCOPED_SERIALISE_CHUNK(SystemChunk::InitialContents, size);
 
       Serialise_InitialState(ser, id, record, &it->second.data);
+    }
+
+    if(handleNow)
+    {
+      // Reset back to empty contents.
+      SetInitialContents(id, InitialContentData());
     }
   }
 
@@ -1232,6 +1278,13 @@ template <typename Configuration>
 inline void ResourceManager<Configuration>::ResetPersistencyCounter(const ResourceId &id)
 {
   m_ResourcePersistencyCounters[id] = 0;
+}
+
+template <typename Configuration>
+inline void ResourceManager<Configuration>::ClearPersistencyCounters()
+{
+  m_ResourcePersistencyCounters.clear();
+  m_PostponedResourceIDs.clear();
 }
 
 template <typename Configuration>
