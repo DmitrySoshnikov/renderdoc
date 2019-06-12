@@ -2062,14 +2062,13 @@ bool WrappedOpenGL::EndFrameCapture(void *dev, void *wnd)
 
     m_State = CaptureState::BackgroundCapturing;
 
+    GetResourceManager()->ClearPersistencyCounters();
+
     GetResourceManager()->MarkUnwrittenResources();
 
     GetResourceManager()->ClearReferencedResources();
 
     GetResourceManager()->FreeInitialContents();
-
-    GetResourceManager()->ClearPersistencyCounters();
-
 
     for(auto it = m_CoherentMaps.begin(); it != m_CoherentMaps.end(); ++it)
     {

@@ -556,11 +556,11 @@ public:
   WrappedResourceType GetWrapper(RealResourceType real);
   void RemoveWrapper(RealResourceType real);
 
-  void ResetPersistencyCounter(const ResourceId &id);
+  void ResetPersistencyCounter(ResourceId id);
   void ClearPersistencyCounters();
   void IncrementPersistencyCounters();
-  bool IsResourcePersistent(const ResourceId &id);
-  bool Prepare_ResourceInitialStateIfNeeded(const ResourceId &id);
+  bool IsResourcePersistent(ResourceId id);
+  void Prepare_ResourceInitialStateIfNeeded(ResourceId id);
   virtual bool IsResourceTrackedForPersistency(const WrappedResourceType &res) { return false; }
 
 protected:
@@ -865,20 +865,18 @@ void ResourceManager<Configuration>::FreeInitialContents()
 }
 
 template <typename Configuration>
-bool ResourceManager<Configuration>::Prepare_ResourceInitialStateIfNeeded(const ResourceId &id)
+void ResourceManager<Configuration>::Prepare_ResourceInitialStateIfNeeded(ResourceId id)
 {
   if(!RenderDoc::Inst().GetCaptureOptions().lowMemoryMode)
-    return false;
+    return;
 
   auto it = m_PostponedResourceIDs.find(id);
 
   if(it == m_PostponedResourceIDs.end())
-    return false;
+    return;
 
   WrappedResourceType res = GetCurrentResource(id);
   Prepare_InitialState(res);
-
-  return true;
 }
 
 template <typename Configuration>
@@ -1117,7 +1115,7 @@ void ResourceManager<Configuration>::InsertInitialContentsChunks(WriteSerialiser
 #endif
 
     // Load postponed resource if needed.
-    bool handleNow = Prepare_ResourceInitialStateIfNeeded(id);
+    Prepare_ResourceInitialStateIfNeeded(id);
 
     dirty++;
 
@@ -1141,7 +1139,7 @@ void ResourceManager<Configuration>::InsertInitialContentsChunks(WriteSerialiser
       Serialise_InitialState(ser, id, record, &it->second.data);
     }
 
-    if(handleNow)
+    if(RenderDoc::Inst().GetCaptureOptions().lowMemoryMode)
     {
       // Reset back to empty contents.
       SetInitialContents(id, InitialContentData());
@@ -1275,7 +1273,7 @@ void ResourceManager<Configuration>::DestroyResourceRecord(ResourceRecord *recor
 }
 
 template <typename Configuration>
-inline void ResourceManager<Configuration>::ResetPersistencyCounter(const ResourceId &id)
+inline void ResourceManager<Configuration>::ResetPersistencyCounter(ResourceId id)
 {
   m_ResourcePersistencyCounters[id] = 0;
 }
@@ -1298,7 +1296,7 @@ inline void ResourceManager<Configuration>::IncrementPersistencyCounters()
 }
 
 template <typename Configuration>
-inline bool ResourceManager<Configuration>::IsResourcePersistent(const ResourceId &id)
+inline bool ResourceManager<Configuration>::IsResourcePersistent(ResourceId id)
 {
   SCOPED_LOCK(m_Lock);
 
