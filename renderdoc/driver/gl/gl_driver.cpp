@@ -1928,23 +1928,31 @@ bool WrappedOpenGL::EndFrameCapture(void *dev, void *wnd)
 
     RenderDoc::FramePixels *bbim = NULL;
 
-    // if the specified context isn't current, try and see if we've saved
-    // an appropriate backbuffer image during capture.
-    if((dev != NULL && prevctx.ctx != dev) || (wnd != 0 && (void *)prevctx.wnd != wnd))
+    if(RenderDoc::Inst().GetCaptureOptions().lowMemoryMode)
     {
-      auto it = m_BackbufferImages.find(wnd);
-      if(it != m_BackbufferImages.end())
-      {
-        // pop this backbuffer image out of the map
-        bbim = it->second;
-        m_BackbufferImages.erase(it);
-      }
+      // Create empty `FramePixels` in LMM skipping thumbnail creation.
+      bbim = new RenderDoc::FramePixels();
     }
+    else
+    {
+      // if the specified context isn't current, try and see if we've saved
+      // an appropriate backbuffer image during capture.
+      if((dev != NULL && prevctx.ctx != dev) || (wnd != 0 && (void *)prevctx.wnd != wnd))
+      {
+        auto it = m_BackbufferImages.find(wnd);
+        if(it != m_BackbufferImages.end())
+        {
+          // pop this backbuffer image out of the map
+          bbim = it->second;
+          m_BackbufferImages.erase(it);
+        }
+      }
 
-    // if we don't have one selected, save the backbuffer image from the
-    // current context
-    if(bbim == NULL)
-      bbim = SaveBackbufferImage();
+      // if we don't have one selected, save the backbuffer image from the
+      // current context
+      if(bbim == NULL)
+        bbim = SaveBackbufferImage();
+    }
 
     RDCFile *rdc =
         RenderDoc::Inst().CreateRDC(GetDriverType(), m_CapturedFrames.back().frameNumber, bbim[0]);
