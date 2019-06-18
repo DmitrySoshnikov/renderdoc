@@ -215,6 +215,15 @@ public:
   using ResourceManager::MarkDirtyResource;
 
   void MarkDirtyResource(GLResource res) { return ResourceManager::MarkDirtyResource(GetID(res)); }
+
+  // Mark resource as dirty and write-referenced.
+  // Write-referenced resources are used to track resource "age".
+  void MarkDirtyWithWriteReference(GLResource res)
+  {
+    MarkResourceFrameReferenced(res, eFrameRef_ReadBeforeWrite);
+    MarkDirtyResource(res);
+  }
+
   void RegisterSync(ContextPair &ctx, GLsync sync, GLuint &name, ResourceId &id)
   {
     name = (GLuint)Atomic::Inc64(&m_SyncName);

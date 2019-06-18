@@ -369,6 +369,8 @@ void WrappedOpenGL::glBindBuffer(GLenum target, GLuint buffer)
     if(IsBackgroundCapturing(m_State) && target == eGL_TRANSFORM_FEEDBACK_BUFFER &&
        RecordUpdateCheck(cd.m_FeedbackRecord))
     {
+      GetResourceManager()->MarkResourceFrameReferenced(cd.m_FeedbackRecord->Resource,
+                                                        eFrameRef_ReadBeforeWrite);
       GLuint feedback = cd.m_FeedbackRecord->Resource.name;
 
       // use glTransformFeedbackBufferBase to ensure the feedback object is bound when we bind the
@@ -712,6 +714,11 @@ void WrappedOpenGL::glNamedBufferDataEXT(GLuint buffer, GLsizeiptr size, const v
     }
     else
     {
+      if(IsBackgroundCapturing(m_State))
+      {
+        GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                          eFrameRef_PartialWrite);
+      }
       record->AddChunk(chunk);
       record->SetDataPtr(chunk->GetData());
       record->Length = (int32_t)size;
@@ -856,6 +863,11 @@ void WrappedOpenGL::glBufferData(GLenum target, GLsizeiptr size, const void *dat
     }
     else
     {
+      if(IsBackgroundCapturing(m_State))
+      {
+        GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                          eFrameRef_PartialWrite);
+      }
       record->AddChunk(chunk);
       record->SetDataPtr(chunk->GetData());
       record->Length = size;
@@ -935,6 +947,11 @@ void WrappedOpenGL::glNamedBufferSubDataEXT(GLuint buffer, GLintptr offset, GLsi
     }
     else
     {
+      if(IsBackgroundCapturing(m_State))
+      {
+        GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                          eFrameRef_ReadBeforeWrite);
+      }
       record->AddChunk(chunk);
       record->UpdateCount++;
 
@@ -988,6 +1005,11 @@ void WrappedOpenGL::glBufferSubData(GLenum target, GLintptr offset, GLsizeiptr s
     }
     else
     {
+      if(IsBackgroundCapturing(m_State))
+      {
+        GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                          eFrameRef_ReadBeforeWrite);
+      }
       record->AddChunk(chunk);
       record->UpdateCount++;
 
@@ -1069,6 +1091,11 @@ void WrappedOpenGL::glNamedCopyBufferSubDataEXT(GLuint readBuffer, GLuint writeB
     }
     else
     {
+      if(IsBackgroundCapturing(m_State))
+      {
+        GetResourceManager()->MarkResourceFrameReferenced(writerecord->GetResourceID(),
+                                                          eFrameRef_ReadBeforeWrite);
+      }
       writerecord->AddChunk(chunk);
       writerecord->AddParent(readrecord);
       writerecord->UpdateCount++;
@@ -1130,6 +1157,11 @@ void WrappedOpenGL::glCopyBufferSubData(GLenum readTarget, GLenum writeTarget, G
     }
     else
     {
+      if(IsBackgroundCapturing(m_State))
+      {
+        GetResourceManager()->MarkResourceFrameReferenced(writerecord->GetResourceID(),
+                                                          eFrameRef_ReadBeforeWrite);
+      }
       writerecord->AddChunk(chunk);
       writerecord->AddParent(readrecord);
       writerecord->UpdateCount++;
@@ -1239,6 +1271,8 @@ void WrappedOpenGL::glBindBufferBase(GLenum target, GLuint index, GLuint buffer)
     if(IsBackgroundCapturing(m_State) && target == eGL_TRANSFORM_FEEDBACK_BUFFER &&
        RecordUpdateCheck(cd.m_FeedbackRecord))
     {
+      GetResourceManager()->MarkResourceFrameReferenced(cd.m_FeedbackRecord->Resource,
+                                                        eFrameRef_ReadBeforeWrite);
       GLuint feedback = cd.m_FeedbackRecord->Resource.name;
 
       // use glTransformFeedbackBufferBase to ensure the feedback object is bound when we bind the
@@ -1368,6 +1402,8 @@ void WrappedOpenGL::glBindBufferRange(GLenum target, GLuint index, GLuint buffer
     if(IsBackgroundCapturing(m_State) && target == eGL_TRANSFORM_FEEDBACK_BUFFER &&
        RecordUpdateCheck(cd.m_FeedbackRecord))
     {
+      GetResourceManager()->MarkResourceFrameReferenced(cd.m_FeedbackRecord->Resource,
+                                                        eFrameRef_ReadBeforeWrite);
       GLuint feedback = cd.m_FeedbackRecord->Resource.name;
 
       // use glTransformFeedbackBufferRange to ensure the feedback object is bound when we bind the
@@ -1523,6 +1559,8 @@ void WrappedOpenGL::glBindBuffersBase(GLenum target, GLuint first, GLsizei count
     if(buffers && IsBackgroundCapturing(m_State) && target == eGL_TRANSFORM_FEEDBACK_BUFFER &&
        RecordUpdateCheck(cd.m_FeedbackRecord))
     {
+      GetResourceManager()->MarkResourceFrameReferenced(cd.m_FeedbackRecord->Resource,
+                                                        eFrameRef_ReadBeforeWrite);
       GLuint feedback = cd.m_FeedbackRecord->Resource.name;
 
       for(int i = 0; i < count; i++)
@@ -1724,6 +1762,8 @@ void WrappedOpenGL::glBindBuffersRange(GLenum target, GLuint first, GLsizei coun
     if(buffers && IsBackgroundCapturing(m_State) && target == eGL_TRANSFORM_FEEDBACK_BUFFER &&
        RecordUpdateCheck(cd.m_FeedbackRecord))
     {
+      GetResourceManager()->MarkResourceFrameReferenced(cd.m_FeedbackRecord->Resource,
+                                                        eFrameRef_ReadBeforeWrite);
       GLuint feedback = cd.m_FeedbackRecord->Resource.name;
 
       for(int i = 0; i < count; i++)
@@ -2337,9 +2377,10 @@ GLboolean WrappedOpenGL::glUnmapNamedBufferEXT(GLuint buffer)
     if(IsActiveCapturing(m_State))
     {
       GetResourceManager()->MarkDirtyResource(record->GetResourceID());
-      GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
-                                                        eFrameRef_ReadBeforeWrite);
     }
+
+    GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                      eFrameRef_ReadBeforeWrite);
 
     GLboolean ret = GL_TRUE;
 
@@ -2625,6 +2666,8 @@ void WrappedOpenGL::glFlushMappedNamedBufferRangeEXT(GLuint buffer, GLintptr off
   else if(IsBackgroundCapturing(m_State))
   {
     GetResourceManager()->MarkDirtyResource(record->GetResourceID());
+    GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                      eFrameRef_ReadBeforeWrite);
   }
 }
 
@@ -2870,8 +2913,6 @@ void WrappedOpenGL::glTransformFeedbackBufferBase(GLuint xfb, GLuint index, GLui
     if(IsActiveCapturing(m_State))
     {
       GetContextRecord()->AddChunk(scope.Get());
-      GetResourceManager()->MarkResourceFrameReferenced(BufferRes(GetCtx(), buffer),
-                                                        eFrameRef_ReadBeforeWrite);
     }
     else if(xfb != 0)
     {
@@ -2882,6 +2923,12 @@ void WrappedOpenGL::glTransformFeedbackBufferBase(GLuint xfb, GLuint index, GLui
 
       if(buffer != 0)
         fbrecord->AddParent(GetResourceManager()->GetResourceRecord(BufferRes(GetCtx(), buffer)));
+    }
+
+    if(IsCaptureMode(m_State))
+    {
+      GetResourceManager()->MarkResourceFrameReferenced(BufferRes(GetCtx(), buffer),
+                                                        eFrameRef_ReadBeforeWrite);
     }
   }
 }
@@ -2927,8 +2974,6 @@ void WrappedOpenGL::glTransformFeedbackBufferRange(GLuint xfb, GLuint index, GLu
     if(IsActiveCapturing(m_State))
     {
       GetContextRecord()->AddChunk(scope.Get());
-      GetResourceManager()->MarkResourceFrameReferenced(BufferRes(GetCtx(), buffer),
-                                                        eFrameRef_ReadBeforeWrite);
     }
     else if(xfb != 0)
     {
@@ -2939,6 +2984,12 @@ void WrappedOpenGL::glTransformFeedbackBufferRange(GLuint xfb, GLuint index, GLu
 
       if(buffer != 0)
         fbrecord->AddParent(GetResourceManager()->GetResourceRecord(BufferRes(GetCtx(), buffer)));
+    }
+
+    if(IsCaptureMode(m_State))
+    {
+      GetResourceManager()->MarkResourceFrameReferenced(BufferRes(GetCtx(), buffer),
+                                                        eFrameRef_ReadBeforeWrite);
     }
   }
 }

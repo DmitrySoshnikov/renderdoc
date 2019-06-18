@@ -129,8 +129,8 @@ std::vector<GLResource> GLResourceManager::GetFBOTextures(GLResource res)
   return GetFBOAttachmentsByType(res, eGL_TEXTURE);
 }
 
-bool GLResourceManager::IsResourceTrackedForPersistency(const GLResource &res) {
-  return res.Namespace == eResTexture;
+bool GLResourceManager::IsResourceTrackedForPersistency(const GLResource &_res) {
+  return true;
 }
 
 void GLResourceManager::MarkFBOReferenced(GLResource res, FrameRefType ref)

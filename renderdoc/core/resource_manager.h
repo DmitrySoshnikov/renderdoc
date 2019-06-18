@@ -101,6 +101,10 @@ const FrameRefType eFrameRef_Maximum = eFrameRef_ReadBeforeWrite;
 // this number of frames.
 const uint32_t PERSISTENT_RESOURCE_FRAMES_COUNT = 100;
 
+// Threshold value for resource "age", i.e. how long (in ms) it wasn't
+// referred with the `eFrameRef_ReadBeforeWrite` reference type.
+const uint64_t PERSISTENT_RESOURCE_AGE = 3000;
+
 DECLARE_REFLECTION_ENUM(FrameRefType);
 
 // Compose frame refs that occur in a known order.
@@ -563,6 +567,12 @@ public:
   void Prepare_ResourceInitialStateIfNeeded(ResourceId id);
   virtual bool IsResourceTrackedForPersistency(const WrappedResourceType &res) { return false; }
 
+  void UpdateLastWriteTime(ResourceId id);
+  bool HasPersistentAge(ResourceId id);
+  void ResetLastWriteTimes();
+  void ResetCaptureStartTime();
+  bool IsResourcePostponed(ResourceId id);
+
 protected:
   friend InitialContentData;
   // 'interface' to implement by derived classes
@@ -655,6 +665,17 @@ protected:
   // During initial resources preparation, persistent resources are
   // postponed until serializing to RDC file.
   std::set<ResourceId> m_PostponedResourceIDs;
+
+  // On marking resource write-referenced in frame, its last write
+  // time is reset. The time is used to determine persistent resources,
+  // and is checked against the `PERSISTENT_RESOURCE_AGE`.
+  std::map<ResourceId, double> m_LastWriteTime;
+
+  // Timestamp at the beginning of the frame capture. Used to determine which
+  // resources to refresh for their last write time (see `m_LastWriteTime`).
+  double m_captureStartTime;
+
+  PerformanceTimer m_ResourcesUpdateTimer;
 };
 
 template <typename Configuration>
@@ -703,6 +724,19 @@ void ResourceManager<Configuration>::MarkResourceFrameReferenced(ResourceId id,
 
   if(id == ResourceId())
     return;
+
+  if(RenderDoc::Inst().GetCaptureOptions().lowMemoryMode && IsDirtyFrameRef(refType))
+  {
+    // if the resource was postponed during Active Capture, we need to prepare it
+    // right away, since next Read might be invalid.
+    if(IsResourcePostponed(id))
+    {
+      RDCDEBUG("Preparing resource %llu after it has been postponed.", id);
+      Prepare_ResourceInitialStateIfNeeded(id);
+    }
+
+    UpdateLastWriteTime(id);
+  }
 
   bool newRef = MarkReferenced(m_FrameReferencedResources, id, refType, comp);
 
@@ -877,6 +911,8 @@ void ResourceManager<Configuration>::Prepare_ResourceInitialStateIfNeeded(Resour
 
   WrappedResourceType res = GetCurrentResource(id);
   Prepare_InitialState(res);
+
+  m_PostponedResourceIDs.erase(id);
 }
 
 template <typename Configuration>
@@ -1279,6 +1315,55 @@ inline void ResourceManager<Configuration>::ResetPersistencyCounter(ResourceId i
 }
 
 template <typename Configuration>
+inline void ResourceManager<Configuration>::UpdateLastWriteTime(ResourceId id)
+{
+  SCOPED_LOCK(m_Lock);
+  m_LastWriteTime[id] = m_ResourcesUpdateTimer.GetMilliseconds();
+}
+
+template <typename Configuration>
+inline void ResourceManager<Configuration>::ResetCaptureStartTime()
+{
+  SCOPED_LOCK(m_Lock);
+  // This time is used to analyze which resources to refresh
+  // for their last write time.
+   m_captureStartTime = m_ResourcesUpdateTimer.GetMilliseconds();
+}
+
+template <typename Configuration>
+inline void ResourceManager<Configuration>::ResetLastWriteTimes()
+{
+  SCOPED_LOCK(m_Lock);
+  for(auto it = m_LastWriteTime.begin(); it != m_LastWriteTime.end(); ++it)
+  {
+    // Reset only those resources which were below the threshold on
+    // capture start. Other resource are already above the threshold.
+    if(m_captureStartTime - it->second <= PERSISTENT_RESOURCE_AGE)
+      it->second = m_ResourcesUpdateTimer.GetMilliseconds();
+  }
+}
+
+template <typename Configuration>
+inline bool ResourceManager<Configuration>::HasPersistentAge(ResourceId id)
+{
+  SCOPED_LOCK(m_Lock);
+
+  auto it = m_LastWriteTime.find(id);
+
+  if(it == m_LastWriteTime.end())
+    return true;
+
+  return m_ResourcesUpdateTimer.GetMilliseconds() - it->second >= PERSISTENT_RESOURCE_AGE;
+}
+
+template <typename Configuration>
+inline bool ResourceManager<Configuration>::IsResourcePostponed(ResourceId id)
+{
+  SCOPED_LOCK(m_Lock);
+  return m_PostponedResourceIDs.find(id) != m_PostponedResourceIDs.end();
+}
+
+template <typename Configuration>
 inline void ResourceManager<Configuration>::ClearPersistencyCounters()
 {
   m_ResourcePersistencyCounters.clear();
@@ -1305,9 +1390,7 @@ inline bool ResourceManager<Configuration>::IsResourcePersistent(ResourceId id)
   if(!IsResourceTrackedForPersistency(res))
     return false;
 
-  auto it = m_ResourcePersistencyCounters.find(id);
-  return it == m_ResourcePersistencyCounters.end() ||
-    it->second >= PERSISTENT_RESOURCE_FRAMES_COUNT;
+  return HasPersistentAge(id);
 }
 
 template <typename Configuration>

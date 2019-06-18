@@ -1856,6 +1856,8 @@ void WrappedOpenGL::StartFrameCapture(void *dev, void *wnd)
 
   m_State = CaptureState::ActiveCapturing;
 
+  GetResourceManager()->ResetCaptureStartTime();
+
   m_AppControlledCapture = true;
 
   m_Failures = 0;
@@ -2071,6 +2073,7 @@ bool WrappedOpenGL::EndFrameCapture(void *dev, void *wnd)
     m_State = CaptureState::BackgroundCapturing;
 
     GetResourceManager()->ClearPersistencyCounters();
+    GetResourceManager()->ResetLastWriteTimes();
 
     GetResourceManager()->MarkUnwrittenResources();
 

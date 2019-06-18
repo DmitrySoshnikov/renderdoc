@@ -596,6 +596,10 @@ void WrappedOpenGL::glBindImageTexture(GLuint unit, GLuint texture, GLint level,
     }
 
     GetContextRecord()->AddChunk(chunk);
+  }
+
+  if(IsCaptureMode(m_State))
+  {
     GetResourceManager()->MarkResourceFrameReferenced(TextureRes(GetCtx(), texture),
                                                       eFrameRef_ReadBeforeWrite);
   }
@@ -653,7 +657,10 @@ void WrappedOpenGL::glBindImageTextures(GLuint first, GLsizei count, const GLuin
     Serialise_glBindImageTextures(ser, first, count, textures);
 
     GetContextRecord()->AddChunk(scope.Get());
+  }
 
+  if(IsCaptureMode(m_State))
+  {
     for(GLsizei i = 0; i < count; i++)
       if(textures != NULL && textures[i] != 0)
         GetResourceManager()->MarkResourceFrameReferenced(TextureRes(GetCtx(), textures[i]),
@@ -841,7 +848,8 @@ void WrappedOpenGL::Common_glGenerateTextureMipmapEXT(GLResourceRecord *record, 
     ResourceId texId = record->GetResourceID();
 
     GetResourceManager()->MarkDirtyResource(texId);
-
+    GetResourceManager()->MarkResourceFrameReferenced(texId, eFrameRef_ReadBeforeWrite);
+  
     // all mips are now valid
     uint32_t mips =
         CalcNumMips(m_Textures[texId].width, m_Textures[texId].height, m_Textures[texId].depth);
@@ -1011,6 +1019,8 @@ void WrappedOpenGL::glCopyImageSubData(GLuint srcName, GLenum srcTarget, GLint s
         GetResourceManager()->GetResourceRecord(TextureRes(GetCtx(), dstName));
 
     GetResourceManager()->MarkDirtyResource(dstrecord->GetResourceID());
+    GetResourceManager()->MarkResourceFrameReferenced(dstrecord->GetResourceID(),
+                                                      eFrameRef_CompleteWrite);
 
     // copy over compressed data, if it exists
     if(IsGLES)
@@ -1088,6 +1098,8 @@ void WrappedOpenGL::Common_glCopyTextureSubImage1DEXT(GLResourceRecord *record, 
   if(IsBackgroundCapturing(m_State))
   {
     GetResourceManager()->MarkDirtyResource(record->GetResourceID());
+    GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                      eFrameRef_PartialWrite);
   }
   else if(IsActiveCapturing(m_State))
   {
@@ -1193,6 +1205,8 @@ void WrappedOpenGL::Common_glCopyTextureSubImage2DEXT(GLResourceRecord *record, 
   if(IsBackgroundCapturing(m_State))
   {
     GetResourceManager()->MarkDirtyResource(record->GetResourceID());
+    GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                      eFrameRef_PartialWrite);
   }
   else if(IsActiveCapturing(m_State))
   {
@@ -1305,6 +1319,8 @@ void WrappedOpenGL::Common_glCopyTextureSubImage3DEXT(GLResourceRecord *record, 
   if(IsBackgroundCapturing(m_State))
   {
     GetResourceManager()->MarkDirtyResource(record->GetResourceID());
+    GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                      eFrameRef_PartialWrite);
   }
   else if(IsActiveCapturing(m_State))
   {
@@ -1441,6 +1457,11 @@ void WrappedOpenGL::Common_glTextureParameteriEXT(GLResourceRecord *record, GLen
   }
   else
   {
+    if(IsBackgroundCapturing(m_State))
+    {
+      GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                        eFrameRef_ReadBeforeWrite);
+    }
     record->AddChunk(scope.Get());
     record->UpdateCount++;
 
@@ -1546,6 +1567,11 @@ void WrappedOpenGL::Common_glTextureParameterivEXT(GLResourceRecord *record, GLe
   }
   else
   {
+    if(IsBackgroundCapturing(m_State))
+    {
+      GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                        eFrameRef_ReadBeforeWrite);
+    }
     record->AddChunk(scope.Get());
     record->UpdateCount++;
 
@@ -1654,6 +1680,11 @@ void WrappedOpenGL::Common_glTextureParameterIivEXT(GLResourceRecord *record, GL
   }
   else
   {
+    if(IsBackgroundCapturing(m_State))
+    {
+      GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                        eFrameRef_ReadBeforeWrite);
+    }
     record->AddChunk(scope.Get());
     record->UpdateCount++;
 
@@ -1762,6 +1793,11 @@ void WrappedOpenGL::Common_glTextureParameterIuivEXT(GLResourceRecord *record, G
   }
   else
   {
+    if(IsBackgroundCapturing(m_State))
+    {
+      GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                        eFrameRef_ReadBeforeWrite);
+    }
     record->AddChunk(scope.Get());
     record->UpdateCount++;
 
@@ -1868,6 +1904,11 @@ void WrappedOpenGL::Common_glTextureParameterfEXT(GLResourceRecord *record, GLen
   }
   else
   {
+    if(IsBackgroundCapturing(m_State))
+    {
+      GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                        eFrameRef_ReadBeforeWrite);
+    }
     record->AddChunk(scope.Get());
     record->UpdateCount++;
 
@@ -1973,6 +2014,11 @@ void WrappedOpenGL::Common_glTextureParameterfvEXT(GLResourceRecord *record, GLe
   }
   else
   {
+    if(IsBackgroundCapturing(m_State))
+    {
+      GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                        eFrameRef_ReadBeforeWrite);
+    }
     record->AddChunk(scope.Get());
     record->UpdateCount++;
 
@@ -3686,6 +3732,8 @@ void WrappedOpenGL::Common_glCopyTextureImage1DEXT(GLResourceRecord *record, GLe
       record->VerifyDataType(target);
 
       GetResourceManager()->MarkDirtyResource(record->GetResourceID());
+      GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                        eFrameRef_PartialWrite);
     }
   }
   else if(IsActiveCapturing(m_State))
@@ -3840,6 +3888,8 @@ void WrappedOpenGL::Common_glCopyTextureImage2DEXT(GLResourceRecord *record, GLe
       record->VerifyDataType(target);
 
       GetResourceManager()->MarkDirtyResource(record->GetResourceID());
+      GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                        eFrameRef_PartialWrite);
     }
   }
   else if(IsActiveCapturing(m_State))
@@ -4792,6 +4842,8 @@ void WrappedOpenGL::Common_glTextureSubImage1DEXT(GLResourceRecord *record, GLen
   if(IsBackgroundCapturing(m_State) && unpackbuf != 0)
   {
     GetResourceManager()->MarkDirtyResource(record->GetResourceID());
+    GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                      eFrameRef_PartialWrite);
   }
   else
   {
@@ -5005,6 +5057,8 @@ void WrappedOpenGL::Common_glTextureSubImage2DEXT(GLResourceRecord *record, GLen
   if(IsBackgroundCapturing(m_State) && unpackbuf != 0)
   {
     GetResourceManager()->MarkDirtyResource(record->GetResourceID());
+    GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                      eFrameRef_PartialWrite);
   }
   else
   {
@@ -5226,6 +5280,8 @@ void WrappedOpenGL::Common_glTextureSubImage3DEXT(GLResourceRecord *record, GLen
   if(IsBackgroundCapturing(m_State) && unpackbuf != 0)
   {
     GetResourceManager()->MarkDirtyResource(record->GetResourceID());
+    GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                      eFrameRef_PartialWrite);
   }
   else
   {
@@ -5428,6 +5484,8 @@ void WrappedOpenGL::Common_glCompressedTextureSubImage1DEXT(GLResourceRecord *re
   if(IsBackgroundCapturing(m_State) && unpackbuf != 0)
   {
     GetResourceManager()->MarkDirtyResource(record->GetResourceID());
+    GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                      eFrameRef_PartialWrite);
   }
   else
   {
@@ -5642,6 +5700,8 @@ void WrappedOpenGL::Common_glCompressedTextureSubImage2DEXT(GLResourceRecord *re
   if(IsBackgroundCapturing(m_State) && unpackbuf != 0)
   {
     GetResourceManager()->MarkDirtyResource(record->GetResourceID());
+    GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                      eFrameRef_PartialWrite);
   }
   else
   {
@@ -5861,6 +5921,8 @@ void WrappedOpenGL::Common_glCompressedTextureSubImage3DEXT(GLResourceRecord *re
   if(IsBackgroundCapturing(m_State) && unpackbuf != 0)
   {
     GetResourceManager()->MarkDirtyResource(record->GetResourceID());
+    GetResourceManager()->MarkResourceFrameReferenced(record->GetResourceID(),
+                                                      eFrameRef_PartialWrite);
   }
   else
   {

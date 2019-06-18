@@ -553,7 +553,7 @@ void GLRenderState::MarkDirty(WrappedOpenGL *driver) const
       GL.glGetIntegeri_v(eGL_IMAGE_BINDING_NAME, i, (GLint *)&name);
 
       if(name)
-        manager->MarkDirtyResource(TextureRes(ctx, name));
+        manager->MarkDirtyWithWriteReference(TextureRes(ctx, name));
     }
   }
 
@@ -606,7 +606,7 @@ void GLRenderState::MarkDirty(WrappedOpenGL *driver) const
         if(type == eGL_RENDERBUFFER)
           manager->MarkDirtyResource(RenderbufferRes(ctx, name));
         else
-          manager->MarkDirtyResource(TextureRes(ctx, name));
+          manager->MarkDirtyWithWriteReference(TextureRes(ctx, name));
       }
     }
 
@@ -620,7 +620,7 @@ void GLRenderState::MarkDirty(WrappedOpenGL *driver) const
       if(type == eGL_RENDERBUFFER)
         manager->MarkDirtyResource(RenderbufferRes(ctx, name));
       else
-        manager->MarkDirtyResource(TextureRes(ctx, name));
+        manager->MarkDirtyWithWriteReference(TextureRes(ctx, name));
     }
 
     GL.glGetFramebufferAttachmentParameteriv(eGL_DRAW_FRAMEBUFFER, eGL_STENCIL_ATTACHMENT,
@@ -633,7 +633,7 @@ void GLRenderState::MarkDirty(WrappedOpenGL *driver) const
       if(type == eGL_RENDERBUFFER)
         manager->MarkDirtyResource(RenderbufferRes(ctx, name));
       else
-        manager->MarkDirtyResource(TextureRes(ctx, name));
+        manager->MarkDirtyWithWriteReference(TextureRes(ctx, name));
     }
   }
 }
